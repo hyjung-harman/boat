@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>좌석 선택 순위 지정 - 결과</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="rank.js"></script>
+</head>
+<body class="page-shell page-rank-result">
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="bg-grid"></div>
+
+  <main class="app-frame result-frame">
+    <header class="result-header glass">
+      <div>
+        <h1>좌석 선택 순위 결과</h1>
+      </div>
+      <div class="header-actions">
+        <a class="ghost-btn link-btn" href="index.html">홈으로</a>
+        <a class="ghost-btn link-btn" href="rank-selection.html">다시 하기</a>
+      </div>
+    </header>
+
+    <section class="result-summary-grid">
+      <article class="glass stat-card">
+        <span>전체 이름</span>
+        <strong id="totalNameStat">0</strong>
+      </article>
+      <article class="glass stat-card">
+        <span>1위</span>
+        <strong id="topNameStat">-</strong>
+      </article>
+      <article class="glass stat-card">
+        <span>생성 시각</span>
+        <strong id="generatedAtStat">-</strong>
+      </article>
+    </section>
+
+    <section class="glass panel result-panel rank-panel">
+      <div class="panel-head">
+        <h2>순위 목록</h2>
+        <p>입력한 이름이 랜덤 셔플되어 순위로 정리됩니다.</p>
+      </div>
+      <div id="rankList" class="seat-list rank-list"></div>
+    </section>
+  </main>
+</body>
+</html>
