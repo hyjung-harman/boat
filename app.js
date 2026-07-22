@@ -164,7 +164,54 @@ function parseSeparatedSeats(text, totalSeats, selectedSeatNumbers = []) {
       }
     });
 
+  // If separation is used, keep the outermost selected seats separated as well.
+  if (seatSet.size > 0 && Number.isInteger(totalSeats) && totalSeats >= 2) {
+    seatSet.add(1);
+    seatSet.add(totalSeats);
+  }
+
   return [...seatSet].sort((left, right) => left - right);
+}
+
+function parseSeparatedSeatPairs(text, totalSeats, selectedSeatNumbers = []) {
+  const pairKeys = new Set();
+
+  text
+    .split(/[\r\n,]+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .forEach((line) => {
+      const match = line.match(/^(\d+)\s*(?:-|~)\s*(\d+)$/);
+
+      if (!match) {
+        return;
+      }
+
+      const first = toLogicalSeatNumber(Number.parseInt(match[1], 10), totalSeats, selectedSeatNumbers);
+      const second = toLogicalSeatNumber(Number.parseInt(match[2], 10), totalSeats, selectedSeatNumbers);
+
+      if (!Number.isInteger(first) || !Number.isInteger(second)) {
+        return;
+      }
+
+      if (first < 1 || first > totalSeats || second < 1 || second > totalSeats || first === second) {
+        return;
+      }
+
+      const left = Math.min(first, second);
+      const right = Math.max(first, second);
+      pairKeys.add(`${left}-${right}`);
+    });
+
+  // Keep the first/last logical seats as a separated pair whenever separation is in use.
+  if (pairKeys.size > 0 && Number.isInteger(totalSeats) && totalSeats >= 2) {
+    pairKeys.add(`1-${totalSeats}`);
+  }
+
+  return [...pairKeys].map((pairKey) => {
+    const [left, right] = pairKey.split("-").map((value) => Number.parseInt(value, 10));
+    return [left, right];
+  });
 }
 
 function sanitizeSeparatedSeatsInput(text, totalSeats, selectedSeatNumbers = []) {
@@ -351,31 +398,48 @@ function buildSeparatedSeatExample(selectedSeatNumbers, seatCapacity) {
 
   const firstSeatNumber = normalizedSelectedSeatNumbers[0];
   const lastSeatNumber = normalizedSelectedSeatNumbers[normalizedSelectedSeatNumbers.length - 1];
-  const examplePairs = [`${firstSeatNumber}-${lastSeatNumber}`];
+  const examplePairs = [];
 
-  for (let index = 0; index < normalizedSelectedSeatNumbers.length - 1; index += 1) {
-    const current = normalizedSelectedSeatNumbers[index];
-    const next = normalizedSelectedSeatNumbers[index + 1];
-
-    if ((next - current) > 1 && sideOf(current) === sideOf(next)) {
-      const sameSideGapPair = `${current}-${next}`;
-      if (!examplePairs.includes(sameSideGapPair)) {
-        examplePairs.push(sameSideGapPair);
-      }
+  const addPair = (leftSeatNumber, rightSeatNumber) => {
+    if (!Number.isInteger(leftSeatNumber) || !Number.isInteger(rightSeatNumber)) {
+      return;
     }
+
+    if (leftSeatNumber === rightSeatNumber) {
+      return;
+    }
+
+    const first = Math.min(leftSeatNumber, rightSeatNumber);
+    const second = Math.max(leftSeatNumber, rightSeatNumber);
+    const pair = `${first}-${second}`;
+
+    if (!examplePairs.includes(pair)) {
+      examplePairs.push(pair);
+    }
+  };
+
+  // Rule 3: if first/last selected seats are not consecutive, they are separated.
+  if ((lastSeatNumber - firstSeatNumber) > 1) {
+    addPair(firstSeatNumber, lastSeatNumber);
   }
 
   for (let index = 0; index < normalizedSelectedSeatNumbers.length - 1; index += 1) {
     const current = normalizedSelectedSeatNumbers[index];
     const next = normalizedSelectedSeatNumbers[index + 1];
 
-    if ((next - current) === 1 && sideOf(current) !== sideOf(next)) {
-      const crossSideAdjacentPair = `${current}-${next}`;
-      if (!examplePairs.includes(crossSideAdjacentPair)) {
-        examplePairs.push(crossSideAdjacentPair);
-      }
-      break;
+    // Rule 1: any non-consecutive selected numbers are separated.
+    if ((next - current) > 1) {
+      addPair(current, next);
     }
+
+    // Rule 2: even consecutive numbers are separated when they are on opposite sides.
+    if ((next - current) === 1 && sideOf(current) !== sideOf(next)) {
+      addPair(current, next);
+    }
+  }
+
+  if (examplePairs.length === 0) {
+    addPair(firstSeatNumber, lastSeatNumber);
   }
 
   return `예: ${examplePairs.join(", ")}`;
@@ -811,30 +875,35 @@ function distributeEmptySeats(emptySeats, gapCount) {
   return gaps;
 }
 
-function findBlockPlacementStarts(totalSeats, blockSize, seatMap, separatedSeatSet) {
+function findBlockPlacementStarts(totalSeats, blockSize, seatMap, separatedSeatSet, separatedSeatPairs = []) {
   const placementStarts = [];
 
   for (let startSeat = 1; startSeat <= totalSeats; startSeat += 1) {
-    let separatedCount = 0;
     let fits = true;
+    const candidateSeatNumbers = [];
 
     for (let offset = 0; offset < blockSize; offset += 1) {
       const seatNumber = ((startSeat - 1 + offset) % totalSeats) + 1;
       const seat = seatMap[seatNumber - 1];
+      candidateSeatNumbers.push(seatNumber);
 
       if (seat && seat.kind !== "empty") {
         fits = false;
         break;
       }
+    }
 
-      if (separatedSeatSet.has(seatNumber)) {
-        separatedCount += 1;
+    if (!fits) {
+      continue;
+    }
 
-        if (separatedCount > 1) {
-          fits = false;
-          break;
-        }
-      }
+    const candidateSet = new Set(candidateSeatNumbers);
+    const containsBothSidesOfPair = separatedSeatPairs.some(([left, right]) => (
+      candidateSet.has(left) && candidateSet.has(right)
+    ));
+
+    if (containsBothSidesOfPair) {
+      fits = false;
     }
 
     if (fits) {
@@ -866,6 +935,7 @@ function generateResult(settings) {
   const soloBlocks = shuffle(settings.soloMembers.map((name, index) => ({ blockId: settings.groupTeams.length + index, kind: "solo", title: name, members: [name], size: 1, label: name })));
   const blocks = [...teamBlocks, ...soloBlocks];
   const separatedSeatSet = settings.separatedSeatSet ?? new Set(settings.separatedSeats);
+  const separatedSeatPairs = settings.separatedSeatPairs ?? [];
 
   for (let attempt = 0; attempt < 200; attempt += 1) {
     const seatMap = Array.from({ length: logicalSeatCount }, (_, index) => {
@@ -880,7 +950,7 @@ function generateResult(settings) {
     let failed = false;
 
     for (const block of teamBlocks) {
-      const fittingStarts = findBlockPlacementStarts(logicalSeatCount, block.size, seatMap, separatedSeatSet);
+      const fittingStarts = findBlockPlacementStarts(logicalSeatCount, block.size, seatMap, separatedSeatSet, separatedSeatPairs);
 
       if (fittingStarts.length === 0) {
         failed = true;
@@ -970,7 +1040,7 @@ function generateResult(settings) {
     return {
       totalSeats: logicalSeatCount,
       separatedSeatNumbers: mappedSeparatedSeatNumbers,
-      separatedSeatText: mappedSeparatedSeatNumbers.map((seatNumber) => `${seatNumber}`).join(", "),
+      separatedSeatText: settings.separatedSeatText ?? mappedSeparatedSeatNumbers.map((seatNumber) => `${seatNumber}`).join(", "),
       totalPeople,
       blocks: mappedAssignments,
       seatMap: mappedSeatMap
@@ -1006,7 +1076,9 @@ function applyStoredSettings(lockedTotalSeats = null) {
 function renderResult(result) {
   getElement("totalSeatStat").textContent = result.totalSeats;
   getElement("assignedPeopleStat").textContent = result.totalPeople;
-  getElement("separatedSeatStat").textContent = formatPairedSeatGroups(result.separatedSeatNumbers);
+  getElement("separatedSeatStat").textContent = result.separatedSeatText?.trim()
+    ? result.separatedSeatText
+    : formatPairedSeatGroups(result.separatedSeatNumbers);
 
   const seatList = getElement("seatList");
   const seatMap = getElement("seatMap");
@@ -1416,6 +1488,8 @@ function handleSettingsPage() {
   const overlay = getElement("loadingOverlay");
   const resetButton = getElement("resetButton");
   const separatedSeatsInput = getElement("separatedSeats");
+  const combinedTeamsInput = getElement("combinedTeams");
+  const soloMembersInput = getElement("soloMembers");
   const totalSeatsInput = getElement("totalSeats");
   const totalSeatsHelp = getElement("totalSeatsHelp");
   const separatedSeatSuggestion = buildSeparatedSeatSuggestion(selectedSeatNumbers, capacity);
@@ -1441,6 +1515,16 @@ function handleSettingsPage() {
     message.style.color = "var(--danger)";
   };
 
+  const persistSettingsDraft = () => {
+    saveSettings({
+      totalSeats: `${selectedSeatNumbers.length}`,
+      separatedSeats: separatedSeatsInput.value,
+      combinedTeams: combinedTeamsInput.value,
+      soloMembers: soloMembersInput.value,
+      availableSeatNumbers: selectedSeatNumbers
+    });
+  };
+
   resetButton.addEventListener("click", () => {
     resetLoadingOverlayState();
     localStorage.removeItem(STORAGE_KEY);
@@ -1454,16 +1538,21 @@ function handleSettingsPage() {
   });
 
   separatedSeatsInput.addEventListener("input", refreshSeparatedSeatsInput);
+  combinedTeamsInput.addEventListener("input", persistSettingsDraft);
+  soloMembersInput.addEventListener("input", persistSettingsDraft);
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+
+    const separatedSeatInputText = getElement("separatedSeats").value;
 
     const settings = {
       totalSeats: selectedSeatNumbers.length,
       seatCapacity: capacity,
       availableSeatNumbers: selectedSeatNumbers,
-      separatedSeats: parseSeparatedSeats(getElement("separatedSeats").value, selectedSeatNumbers.length, selectedSeatNumbers),
-      separatedSeatText: getElement("separatedSeats").value.trim(),
+      separatedSeats: parseSeparatedSeats(separatedSeatInputText, selectedSeatNumbers.length, selectedSeatNumbers),
+      separatedSeatPairs: parseSeparatedSeatPairs(separatedSeatInputText, selectedSeatNumbers.length, selectedSeatNumbers),
+      separatedSeatText: separatedSeatInputText,
       ...parseCombinedTeams(getElement("combinedTeams").value),
       soloMembers: parseSoloMembers(getElement("soloMembers").value)
     };
@@ -1480,13 +1569,7 @@ function handleSettingsPage() {
     message.textContent = "설정을 저장하고 배정을 준비합니다.";
     message.style.color = "var(--muted)";
 
-    saveSettings({
-      totalSeats: `${selectedSeatNumbers.length}`,
-      separatedSeats: getElement("separatedSeats").value,
-      combinedTeams: getElement("combinedTeams").value,
-      soloMembers: getElement("soloMembers").value,
-      availableSeatNumbers: selectedSeatNumbers
-    });
+    persistSettingsDraft();
 
     overlay.hidden = false;
     if (loadingTimerId !== null) {
