@@ -1319,10 +1319,10 @@ function handleSeatPickerPage() {
     }
 
     if (selectedCount >= 3) {
-      message.textContent = "좌석 선택이 완료되었습니다. 다음으로 이동해 주세요.";
+      message.textContent = "좌석 선택이 완료되었습니다.";
       message.style.color = "var(--muted)";
     } else {
-      message.textContent = "최소 3석 이상 선택해야 다음으로 이동할 수 있습니다.";
+      message.textContent = "최소 3석 이상 선택해야 합니다.";
       message.style.color = "var(--danger)";
     }
   };

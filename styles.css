@@ -895,7 +895,7 @@ button {
 
 .page-seat-picker #seatPickerMessage {
   text-align: center;
-  margin-top: -46px;
+  margin-top: -56px;
   margin-bottom: 8px;
   position: relative;
   z-index: 2;
@@ -903,6 +903,7 @@ button {
 
 .page-seat-picker .settings-footer .actions {
   justify-content: center;
+  margin-top: 3px;
 }
 
 .actions {
@@ -1691,6 +1692,18 @@ button {
     max-height: 76px;
   }
 
+  .page-seat-picker .seat-cell.pickable {
+    border-radius: 9px;
+  }
+
+  .page-seat-picker .seat-cell.pickable .seat-cell-number {
+    font-size: calc(var(--picker-seat-number-font, 1rem) * 0.96);
+  }
+
+  .page-seat-picker .seat-cell.pickable .seat-cell-name {
+    font-size: calc(var(--picker-seat-name-font, 0.74rem) * 0.96);
+  }
+
   .page-settings .guide-image {
     width: min(264px, 88.8%);
     max-height: 158px;
@@ -1709,6 +1722,22 @@ button {
   .page-settings .settings-footer .actions {
     flex-wrap: nowrap;
     gap: 8px;
+  }
+
+  .page-seat-picker .settings-footer .actions {
+    flex-wrap: nowrap;
+    gap: 8px;
+    justify-content: stretch;
+  }
+
+  .page-seat-picker .settings-footer .actions .ghost-btn,
+  .page-seat-picker .settings-footer .actions .primary-btn,
+  .page-seat-picker .settings-footer .actions .link-btn {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 12px 10px;
+    min-height: 44px;
   }
 
   .page-home .program-card-footer {
