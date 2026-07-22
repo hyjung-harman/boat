@@ -22,7 +22,7 @@
       <a class="hero-visual" href="https://cafe.naver.com/skrtlvkxl" target="_blank" rel="noopener noreferrer" aria-label="네이버 카페로 이동">
         <img src="image/s1.png" alt="">
       </a>
-      <small class="hero-version">v1.0</small>
+      <small class="hero-version">v1.2</small>
     </section>
 
     <section class="content-grid">
@@ -33,13 +33,13 @@
 
         <div class="field-grid two-col">
           <label class="field">
-            <span>전체 좌석수</span>
-            <input id="totalSeats" name="totalSeats" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="예: 20" required>
-            <small>좌석수는 5~22 까지 입력 가능 합니다.</small>
+            <span>할당 받은 총 좌석수</span>
+            <input id="totalSeats" name="totalSeats" type="text" inputmode="numeric" pattern="[0-9]*" required readonly>
+            <small id="totalSeatsHelp">앞 화면에서 선택된 유효 좌석 수가 자동 반영됩니다.</small>
           </label>
 
           <label class="field">
-            <span>분리 좌석 입력</span>
+            <span>분리 좌석 (자동입력)</span>
             <input id="separatedSeats" name="separatedSeats" type="text" placeholder="예: 1-20, 10-11">
             <small>입력 형식은 1-20, 10-11 입니다. ㅡ 양쪽 좌석은 위치가 떨어진 좌석 입니다.</small>
           </label>
@@ -60,7 +60,7 @@
         <div class="settings-footer">
           <p id="formMessage" class="form-message" aria-live="polite"></p>
           <div class="actions">
-            <a class="ghost-btn link-btn" href="index.html">홈으로</a>
+            <a class="ghost-btn link-btn" href="seat-map-selection.html">이전</a>
             <button type="button" id="resetButton" class="ghost-btn">초기화</button>
             <button type="submit" class="primary-btn">Start</button>
           </div>

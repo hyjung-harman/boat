@@ -180,7 +180,38 @@ function handleResultPage() {
   }
 }
 
+const linkHighlightTimers = new WeakMap();
+
+function flashLinkHighlight(element) {
+  if (!element) {
+    return;
+  }
+
+  element.classList.add("is-flashed");
+
+  const previousTimer = linkHighlightTimers.get(element);
+  if (previousTimer) {
+    window.clearTimeout(previousTimer);
+  }
+
+  const timer = window.setTimeout(() => {
+    element.classList.remove("is-flashed");
+    linkHighlightTimers.delete(element);
+  }, 500);
+
+  linkHighlightTimers.set(element, timer);
+}
+
+function setupSharedLinkHighlights() {
+  document.querySelectorAll(".hero-link-note, .hero-visual, .guide-image-link").forEach((element) => {
+    element.addEventListener("pointerenter", () => flashLinkHighlight(element));
+    element.addEventListener("click", () => flashLinkHighlight(element));
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  setupSharedLinkHighlights();
+
   if (getElement("rankSettingsForm")) {
     resetLoadingOverlayState();
     handleSettingsPage();

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>낚시 배 좌석 배정 - 유효 좌석 선택</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body class="page-shell page-seat-picker">
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="bg-grid"></div>
+
+  <main class="app-frame">
+    <section class="hero-card glass">
+      <div class="hero-copy">
+        <h1>유효 좌석 선택</h1>
+        <p class="hero-text hero-text-small">(선택 좌석 안에서만 랜덤 배정됩니다.<br>최소 3석 이상 선택해 주세요.)</p>
+      </div>
+      <a class="hero-visual" href="https://cafe.naver.com/skrtlvkxl" target="_blank" rel="noopener noreferrer" aria-label="네이버 카페로 이동">
+        <img src="image/s1.png" alt="">
+      </a>
+      <small class="hero-version">v1.2</small>
+    </section>
+
+    <section class="content-grid single-panel-grid">
+      <section class="glass panel map-panel seat-picker-panel">
+        <div class="panel-head">
+          <h2>좌석 맵</h2>
+          <p id="seatPickerSummary">선택 좌석: 0석</p>
+        </div>
+        <div id="seatPickerMap" class="seat-map"></div>
+        <div class="settings-footer">
+          <p id="seatPickerMessage" class="form-message" aria-live="polite"></p>
+          <div class="actions">
+            <a class="ghost-btn link-btn" href="seat-capacity.html">이전</a>
+            <button id="seatPickerNextButton" type="button" class="primary-btn">다음</button>
+          </div>
+        </div>
+      </section>
+    </section>
+  </main>
+</body>
+</html>

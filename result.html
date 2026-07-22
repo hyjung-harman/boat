@@ -14,12 +14,20 @@
 
   <main class="app-frame result-frame">
     <header class="result-header glass">
-      <div>        
-        <h1>좌석 배정 결과</h1>        
+      <div class="result-header-copy">
+        <h1>좌석 배정 결과</h1>
       </div>
-      <div class="header-actions">
-        <a class="ghost-btn link-btn" href="index.html">홈으로</a>
-        <a class="ghost-btn link-btn" href="seat-selection.html">설정으로 돌아가기</a>
+      <div class="result-header-side">
+        <div class="result-header-media">
+          <a class="hero-visual" href="https://cafe.naver.com/skrtlvkxl" target="_blank" rel="noopener noreferrer" aria-label="네이버 카페로 이동">
+            <img src="image/s1.png" alt="">
+          </a>
+          <small class="result-header-version">v1.2</small>
+        </div>
+        <div class="header-actions">
+          <a class="ghost-btn link-btn" href="index.html">홈으로</a>
+          <a class="ghost-btn link-btn" href="seat-selection.html">설정으로</a>
+        </div>
       </div>
     </header>
 
@@ -49,7 +57,7 @@
       <div class="glass panel result-panel">
         <div class="panel-head">
           <h2>좌석 목록</h2>
-          <p>팀(가족)은 이웃하는 좌석을 배정 받기 위해 분리 좌석 양쪽을 모두 배정 받을수 없습니다.</p>
+          <p>팀(가족)은 이웃하는 좌석으로 배정하기 위해 분리 좌석 양쪽을 같이 배정하지 않습니다.</p>
         </div>
         <div id="seatList" class="seat-list"></div>
       </div>

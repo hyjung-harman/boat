@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>낚시 배 좌석 배정 - 인승 입력</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body class="page-shell page-seat-capacity">
+  <div class="bg-orb orb-a"></div>
+  <div class="bg-orb orb-b"></div>
+  <div class="bg-grid"></div>
+
+  <main class="app-frame">
+    <section class="hero-card glass">
+      <div class="hero-copy">
+        <h1>낚시 배 좌석 배정</h1>
+        <p class="hero-text hero-text-small">시작 전에 배 인승 정보를 먼저 입력해 주세요.</p>
+      </div>
+      <a class="hero-visual" href="https://cafe.naver.com/skrtlvkxl" target="_blank" rel="noopener noreferrer" aria-label="네이버 카페로 이동">
+        <img src="image/s1.png" alt="">
+      </a>
+      <small class="hero-version">v1.2</small>
+    </section>
+
+    <section class="content-grid single-panel-grid">
+      <form id="capacityForm" class="glass panel settings-panel">
+        <div class="panel-head">
+          <h2>몇인승 배 입니까?</h2>
+          <p>5~22 인승까지만 입력할 수 있습니다.</p>
+        </div>
+
+        <label class="field">
+          <span>배 인승</span>
+          <input id="boatCapacityInput" name="boatCapacityInput" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="예: 20" required>
+          <small>허용 범위: 5 ~ 22</small>
+        </label>
+
+        <div class="settings-footer">
+          <p id="capacityMessage" class="form-message" aria-live="polite"></p>
+          <div class="actions">
+            <a class="ghost-btn link-btn" href="index.html">이전</a>
+            <button type="submit" class="primary-btn">다음</button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>
