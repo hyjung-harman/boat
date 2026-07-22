@@ -1760,6 +1760,12 @@ button {
     width: min(calc(100% - 24px), 432px);
   }
 
+  .page-seat-picker .seat-map {
+    aspect-ratio: 0.562;
+    margin-top: -34px;
+    margin-bottom: -8px;
+  }
+
   .seat-map-core {
     width: clamp(130px, 34%, 180px);
     min-height: clamp(84px, 24%, 108px);
@@ -1796,6 +1802,12 @@ button {
 @media (max-width: 520px) {
   .seat-map {
     width: min(calc(100% - 20px), 432px);
+  }
+
+  .page-seat-picker .seat-map {
+    aspect-ratio: 0.54;
+    margin-top: -26px;
+    margin-bottom: -2px;
   }
 
   .seat-map-core {
