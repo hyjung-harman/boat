@@ -22,7 +22,7 @@
       <a class="hero-visual" href="https://cafe.naver.com/skrtlvkxl" target="_blank" rel="noopener noreferrer" aria-label="네이버 카페로 이동">
         <img src="image/s1.png" alt="">
       </a>
-      <small class="hero-version">v1.2</small>
+      <small class="hero-version">v1.21</small>
     </section>
 
     <section class="content-grid">
@@ -41,14 +41,23 @@
           <label class="field">
             <span>분리 좌석 (자동입력)</span>
             <input id="separatedSeats" name="separatedSeats" type="text" placeholder="예: 1-20, 10-11">
-            <small>입력 형식은 1-20, 10-11 입니다. ㅡ 양쪽 좌석은 위치가 떨어진 좌석 입니다.</small>
+            <small>입력 형식은 1-20, 10-11 입니다.<br>ㅡ 양쪽 좌석은 위치가 떨어진 좌석 입니다.</small>
           </label>
         </div>
 
         <label class="field">
-          <span>단체 회원 입력</span>
-          <textarea id="combinedTeams" name="combinedTeams" rows="6" placeholder="언더더씨 4&#10;건강, 아진찬&#10;바이킹, 지니&#10;철수1, 철수2, 철수3"></textarea>
-          <small>같은 팀(가족) 멤버는 한줄에 쉼표로 구분해서 입력합니다. 이름 뒤에 3처럼 숫자만 쓰면 언더더씨, 언더더씨 2, 언더더씨 3처럼 자동 확장 됩니다.</small>
+          <div class="team-entry-head">
+            <span class="team-entry-head-title">단체 회원 입력</span>
+            <span class="team-entry-head-tail">선미/후미</span>
+          </div>
+          <div class="team-entry-layout">
+            <div id="teamEntryList" class="team-entry-list" role="group" aria-label="단체 회원 입력과 단체팀 선택"></div>
+            <textarea id="combinedTeams" name="combinedTeams" rows="3" hidden aria-hidden="true" tabindex="-1"></textarea>
+          </div>
+          <small>같은 팀(가족) 멤버는 한줄에 쉼표로 구분해서 입력 합니다.
+            <br>홍길동3 처럼 뒤에 숫자만 쓰면 홍길동1, 홍길동2, 홍길동3 로 자동 생성 됩니다.
+            <br>선미/후미 체크 박스를 선택하면 선미/후미에 우선 배정됩니다.
+          </small>
         </label>
 
         <label class="field">
@@ -84,6 +93,10 @@
           <article class="rule-item">
             <strong>분리 좌석</strong>
             <p>분리 좌석은 선수, 선미 처럼 위치가 떨어진 좌석을 의미합니다. 단체(가족) 회원이 서로 떨어지지 않도록 배정하기 위한 설정 입니다.</p>
+          </article>
+          <article class="rule-item">
+            <strong>선미/후미 우선</strong>
+            <p>단체 팀에게 선미/후미가 우선 배정됩니다.</p>
           </article>
         </div>
 

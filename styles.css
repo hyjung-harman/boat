@@ -178,6 +178,8 @@ button {
   flex: 0 0 clamp(82px, 9vw, 108px);
   max-width: clamp(82px, 9vw, 108px);
   align-self: center;
+  transform: translateX(-16px) scale(1.1);
+  transform-origin: center;
 }
 
 .page-result .result-header .hero-visual img {
@@ -186,8 +188,8 @@ button {
 
 .result-header-version {
   position: absolute;
-  right: 0;
-  bottom: -2px;
+  right: -8px;
+  bottom: -3px;
   color: var(--muted);
   font-size: 0.68rem;
   line-height: 1;
@@ -546,6 +548,13 @@ button {
   width: 100%;
 }
 
+.result-side-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
 .result-panel {
   justify-self: stretch;
 }
@@ -649,6 +658,123 @@ button {
 
 .page-settings #combinedTeams {
   min-height: 58px;
+}
+
+.page-settings .team-entry-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 12px;
+}
+
+.page-settings .team-entry-head-title,
+.page-settings .team-entry-head-tail {
+  font-weight: 600;
+  font-size: 1em;
+  line-height: 1.3;
+}
+
+.page-settings .team-entry-head-tail {
+  font-weight: 400;
+  font-size: 0.84em;
+  justify-self: center;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.page-settings .team-entry-layout {
+  display: grid;
+  gap: 10px;
+}
+
+.page-settings .team-entry-list {
+  display: grid;
+  gap: 8px;
+}
+
+.page-settings .team-entry-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 10px;
+}
+
+.page-settings .team-entry-input {
+  width: 90%;
+  justify-self: start;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  background: rgba(6, 15, 26, 0.88);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  padding: 10px 12px;
+}
+
+.page-settings .team-entry-row.is-checkable .team-entry-input {
+  border-color: rgba(126, 224, 255, 0.28);
+}
+
+.page-settings .team-entry-row.is-checkable.is-selected .team-entry-input {
+  border-color: rgba(126, 224, 255, 0.7);
+  box-shadow: 0 0 0 2px rgba(126, 224, 255, 0.12);
+}
+
+.page-settings .team-entry-input::placeholder {
+  color: rgba(175, 196, 224, 0.72);
+}
+
+.page-settings .team-entry-row.is-solo .team-entry-input {
+  opacity: 0.85;
+}
+
+.page-settings .team-select-toggle {
+  width: 28px;
+  height: 28px;
+  justify-self: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.05);
+  color: transparent;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.page-settings .team-select-toggle:hover {
+  border-color: rgba(126, 224, 255, 0.68);
+  transform: translateY(-1px) scale(1.04);
+}
+
+.page-settings .team-select-toggle.is-selected {
+  background: linear-gradient(155deg, rgba(126, 224, 255, 0.4), rgba(90, 174, 255, 0.24));
+  border-color: rgba(126, 224, 255, 0.8);
+  box-shadow: 0 0 0 4px rgba(126, 224, 255, 0.14);
+}
+
+.page-settings .team-select-mark {
+  color: #ff0000;
+  text-shadow: 0 0 6px rgba(255, 0, 0, 0.88);
+  font-size: 0.98rem;
+  line-height: 1;
+  font-weight: 900;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.14s ease, transform 0.14s ease;
+}
+
+.page-settings .team-select-toggle.is-selected .team-select-mark {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.page-settings .team-select-toggle[disabled] {
+  cursor: not-allowed;
+  opacity: 0.45;
+  transform: none;
 }
 
 .page-settings .settings-footer {
@@ -863,8 +989,8 @@ button {
 
 
 .page-result .result-panel .panel-head {
-  transform: translateY(-16px);
-  margin-bottom: -16px;
+  transform: none;
+  margin-bottom: 0;
 }
 
 .page-seat-picker .seat-map::before {
@@ -1083,13 +1209,35 @@ button {
 }
 
 .result-header .ghost-btn,
-.result-header .link-btn {
+.result-header .link-btn,
+.page-result .result-actions-panel .ghost-btn,
+.page-result .result-actions-panel .link-btn {
   background: linear-gradient(135deg, rgba(126, 224, 255, 0.28), rgba(90, 174, 255, 0.42));
   border-color: rgba(126, 224, 255, 0.42);
   padding: 13px 19px;
   font-size: 1rem;
   min-height: 48px;
   box-shadow: 0 12px 26px rgba(90, 174, 255, 0.18);
+}
+
+.page-result .result-actions-panel {
+  display: flex;
+  align-items: center;
+  justify-content: stretch;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  width: min(100%, 460px);
+  margin: -6px auto 0;
+}
+
+.page-result .result-actions-panel .ghost-btn,
+.page-result .result-actions-panel .link-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  width: 100%;
+  padding-left: 14px;
+  padding-right: 14px;
 }
 
 .result-summary-grid {
@@ -1099,27 +1247,59 @@ button {
   gap: 10px;
 }
 
+.result-side-column .result-summary-grid {
+  margin-top: 0;
+}
+
 .stat-card {
   border-radius: var(--radius-lg);
   padding: 13px 18px;
+  text-align: center;
 }
 
 .result-summary-grid .stat-card span {
-  font-size: 0.83rem;
-  line-height: 1.2;
+  font-size: 0.78rem;
+  line-height: 1.05;
 }
 
 .result-summary-grid .stat-card strong {
-  font-size: 1.17rem;
+  font-size: 1.02rem;
   font-weight: 500;
+  margin-top: 4px;
 }
 
 .stat-card strong {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 1.82rem;
   letter-spacing: -0.04em;
   line-height: 1;
+}
+
+.stat-card-detail {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.64rem;
+  line-height: 1.05;
+}
+
+#sternBowPriorityStat.is-applied {
+  color: #90ee90;
+  text-shadow: 0 0 6px rgba(144, 238, 144, 0.9);
+}
+
+#sternBowPriorityStat.is-not-applied {
+  color: hsl(12, 84%, 72%);
+}
+
+#totalSeatStat,
+#separatedSeatStat {
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted);
+  text-shadow: none;
 }
 
 .seat-list {
@@ -1547,8 +1727,13 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .page-result .result-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .result-panel,
-  .map-panel {
+  .map-panel,
+  .result-side-column {
     width: min(100%, 920px);
   }
 }
@@ -1620,12 +1805,20 @@ button {
   }
 
   .result-header .ghost-btn,
-  .result-header .link-btn {
-    width: auto;
+  .result-header .link-btn,
+  .page-result .result-actions-panel .ghost-btn,
+  .page-result .result-actions-panel .link-btn {
+    width: 100%;
     min-height: 34px;
     padding: 6px 10px;
     font-size: 0.86rem;
     white-space: nowrap;
+  }
+
+  .page-result .result-actions-panel {
+    padding: 8px 10px;
+    gap: 8px;
+    width: min(100%, 420px);
   }
 
   .hero-card {
@@ -1724,6 +1917,14 @@ button {
     gap: 8px;
   }
 
+  .page-settings .team-entry-layout {
+    gap: 8px;
+  }
+
+  .page-settings .team-entry-head {
+    gap: 8px;
+  }
+
   .page-seat-picker .settings-footer .actions {
     flex-wrap: nowrap;
     gap: 8px;
@@ -1765,12 +1966,12 @@ button {
   }
 
   .result-summary-grid {
-    grid-template-columns: 1fr 1fr 2fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 8px;
   }
 
   .result-summary-grid .stat-card {
-    padding: 10px 10px 9px;
+    padding: 7px 8px 6px;
     min-width: 0;
   }
 
@@ -1780,9 +1981,14 @@ button {
   }
 
   .result-summary-grid .stat-card strong {
-    font-size: 0.91rem;
+    font-size: 0.82rem;
     font-weight: 500;
     white-space: nowrap;
+  }
+
+  .result-summary-grid .stat-card .stat-card-detail {
+    font-size: 0.6rem;
+    white-space: normal;
   }
 
   .seat-map {
@@ -1829,6 +2035,19 @@ button {
 }
 
 @media (max-width: 520px) {
+  .page-settings .team-entry-layout {
+    gap: 8px;
+  }
+
+  .page-settings .team-entry-row {
+    gap: 8px;
+  }
+
+  .page-settings .team-entry-input {
+    font-size: 0.88rem;
+    padding: 9px 10px;
+  }
+
   .seat-map {
     width: min(calc(100% - 20px), 432px);
   }

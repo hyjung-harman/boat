@@ -91,14 +91,19 @@ function parseTeams(text) {
     .filter((members) => members.length > 0);
 }
 
-function parseCombinedTeams(text) {
-  const groupTeams = [];
+function parseCombinedTeams(text, selectedTeamKeys = new Set()) {
+  const prioritizedGroupTeams = [];
+  const regularGroupTeams = [];
+  const selectedTeamKeySet = selectedTeamKeys instanceof Set ? selectedTeamKeys : new Set(selectedTeamKeys);
 
   text
     .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .forEach((line) => {
+    .forEach((rawLine, index) => {
+      const line = rawLine.trim();
+      if (!line) {
+        return;
+      }
+
       const membersText = line.replace(/^(?:단체|가족)\s*[:=]\s*/u, "");
       const members = expandShorthandTeam(membersText).filter(Boolean);
 
@@ -106,35 +111,30 @@ function parseCombinedTeams(text) {
         return;
       }
 
-      groupTeams.push(members);
+      const teamKey = `team-${index + 1}`;
+      if (members.length >= 2 && selectedTeamKeySet.has(teamKey)) {
+        prioritizedGroupTeams.push(members);
+        return;
+      }
+
+      regularGroupTeams.push(members);
     });
 
-  return { groupTeams, familyTeams: [] };
+  return {
+    groupTeams: [...prioritizedGroupTeams, ...regularGroupTeams],
+    familyTeams: [],
+    prioritizedGroupCount: prioritizedGroupTeams.length
+  };
 }
 
 function parseSoloMembers(text) {
   return text.split(/[\r\n,]+/).map((item) => item.trim()).filter(Boolean);
 }
 
-function toLogicalSeatNumber(seatNumber, totalSeats, selectedSeatNumbers) {
-  const normalizedSelectedSeatNumbers = normalizeSelectedSeatNumbers(selectedSeatNumbers, Number.MAX_SAFE_INTEGER);
-
-  if (normalizedSelectedSeatNumbers.length > 0) {
-    const selectedIndex = normalizedSelectedSeatNumbers.indexOf(seatNumber);
-    if (selectedIndex >= 0) {
-      return selectedIndex + 1;
-    }
-  }
-
-  if (Number.isInteger(seatNumber) && seatNumber >= 1 && seatNumber <= totalSeats) {
-    return seatNumber;
-  }
-
-  return null;
-}
-
-function parseSeparatedSeats(text, totalSeats, selectedSeatNumbers = []) {
+function parseSeparatedSeats(text, seatCapacity, selectedSeatNumbers = []) {
   const seatSet = new Set();
+  const normalizedSelectedSeatNumbers = normalizeSelectedSeatNumbers(selectedSeatNumbers, seatCapacity);
+  const selectedSeatSet = new Set(normalizedSelectedSeatNumbers);
 
   text
     .split(/[\r\n,]+/)
@@ -144,37 +144,38 @@ function parseSeparatedSeats(text, totalSeats, selectedSeatNumbers = []) {
       const match = line.match(/^(\d+)\s*(?:-|~)\s*(\d+)$/);
 
       if (match) {
-        const first = toLogicalSeatNumber(Number.parseInt(match[1], 10), totalSeats, selectedSeatNumbers);
-        const second = toLogicalSeatNumber(Number.parseInt(match[2], 10), totalSeats, selectedSeatNumbers);
+        const first = Number.parseInt(match[1], 10);
+        const second = Number.parseInt(match[2], 10);
 
-        if (Number.isInteger(first) && first >= 1 && first <= totalSeats) {
+        if (Number.isInteger(first) && selectedSeatSet.has(first)) {
           seatSet.add(first);
         }
 
-        if (Number.isInteger(second) && second >= 1 && second <= totalSeats) {
+        if (Number.isInteger(second) && selectedSeatSet.has(second)) {
           seatSet.add(second);
         }
 
         return;
       }
 
-      const singleSeat = toLogicalSeatNumber(Number.parseInt(line, 10), totalSeats, selectedSeatNumbers);
-      if (Number.isInteger(singleSeat) && singleSeat >= 1 && singleSeat <= totalSeats) {
+      const singleSeat = Number.parseInt(line, 10);
+      if (Number.isInteger(singleSeat) && selectedSeatSet.has(singleSeat)) {
         seatSet.add(singleSeat);
       }
     });
 
-  // If separation is used, keep the outermost selected seats separated as well.
-  if (seatSet.size > 0 && Number.isInteger(totalSeats) && totalSeats >= 2) {
-    seatSet.add(1);
-    seatSet.add(totalSeats);
+  if (seatSet.size > 0 && normalizedSelectedSeatNumbers.length >= 2) {
+    seatSet.add(normalizedSelectedSeatNumbers[0]);
+    seatSet.add(normalizedSelectedSeatNumbers[normalizedSelectedSeatNumbers.length - 1]);
   }
 
   return [...seatSet].sort((left, right) => left - right);
 }
 
-function parseSeparatedSeatPairs(text, totalSeats, selectedSeatNumbers = []) {
+function parseSeparatedSeatPairs(text, seatCapacity, selectedSeatNumbers = []) {
   const pairKeys = new Set();
+  const normalizedSelectedSeatNumbers = normalizeSelectedSeatNumbers(selectedSeatNumbers, seatCapacity);
+  const selectedSeatSet = new Set(normalizedSelectedSeatNumbers);
 
   text
     .split(/[\r\n,]+/)
@@ -187,14 +188,14 @@ function parseSeparatedSeatPairs(text, totalSeats, selectedSeatNumbers = []) {
         return;
       }
 
-      const first = toLogicalSeatNumber(Number.parseInt(match[1], 10), totalSeats, selectedSeatNumbers);
-      const second = toLogicalSeatNumber(Number.parseInt(match[2], 10), totalSeats, selectedSeatNumbers);
+      const first = Number.parseInt(match[1], 10);
+      const second = Number.parseInt(match[2], 10);
 
       if (!Number.isInteger(first) || !Number.isInteger(second)) {
         return;
       }
 
-      if (first < 1 || first > totalSeats || second < 1 || second > totalSeats || first === second) {
+      if (!selectedSeatSet.has(first) || !selectedSeatSet.has(second) || first === second) {
         return;
       }
 
@@ -203,9 +204,8 @@ function parseSeparatedSeatPairs(text, totalSeats, selectedSeatNumbers = []) {
       pairKeys.add(`${left}-${right}`);
     });
 
-  // Keep the first/last logical seats as a separated pair whenever separation is in use.
-  if (pairKeys.size > 0 && Number.isInteger(totalSeats) && totalSeats >= 2) {
-    pairKeys.add(`1-${totalSeats}`);
+  if (pairKeys.size > 0 && normalizedSelectedSeatNumbers.length >= 2) {
+    pairKeys.add(`${normalizedSelectedSeatNumbers[0]}-${normalizedSelectedSeatNumbers[normalizedSelectedSeatNumbers.length - 1]}`);
   }
 
   return [...pairKeys].map((pairKey) => {
@@ -215,10 +215,10 @@ function parseSeparatedSeatPairs(text, totalSeats, selectedSeatNumbers = []) {
 }
 
 function sanitizeSeparatedSeatsInput(text, totalSeats, selectedSeatNumbers = []) {
-  const allowedNumbers = new Set(Array.from({ length: totalSeats }, (_, index) => index + 1));
-  normalizeSelectedSeatNumbers(selectedSeatNumbers, Number.MAX_SAFE_INTEGER).forEach((seatNumber) => {
-    allowedNumbers.add(seatNumber);
-  });
+  const normalizedSelectedSeatNumbers = normalizeSelectedSeatNumbers(selectedSeatNumbers, Number.MAX_SAFE_INTEGER);
+  const allowedNumbers = normalizedSelectedSeatNumbers.length > 0
+    ? new Set(normalizedSelectedSeatNumbers)
+    : new Set(Array.from({ length: totalSeats }, (_, index) => index + 1));
 
   const sanitizedParts = [];
   let changed = false;
@@ -246,25 +246,34 @@ function sanitizeSeparatedSeatsInput(text, totalSeats, selectedSeatNumbers = [])
   };
 }
 
+let randomState = 0;
+
+function initializeTimeSeedRandomState() {
+  const nowSeed = Date.now() >>> 0;
+  const performanceSeed = typeof performance !== "undefined" && performance && typeof performance.now === "function"
+    ? Math.floor(performance.now() * 1000) >>> 0
+    : 0;
+  randomState = (nowSeed ^ performanceSeed ^ 0x9E3779B9) >>> 0;
+  if (randomState === 0) {
+    randomState = 0x6D2B79F5;
+  }
+}
+
+function nextRandomUnit() {
+  randomState = (randomState + 0x6D2B79F5) >>> 0;
+  let mixed = randomState;
+  mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
+  mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
+  return ((mixed ^ (mixed >>> 14)) >>> 0) / 4294967296;
+}
+
+initializeTimeSeedRandomState();
+
 function getRandomInt(maxExclusive) {
   if (maxExclusive <= 1) {
     return 0;
   }
-
-  const cryptoObject = globalThis.crypto;
-  if (cryptoObject && typeof cryptoObject.getRandomValues === "function") {
-    const uint32 = new Uint32Array(1);
-    const limit = Math.floor(0x100000000 / maxExclusive) * maxExclusive;
-
-    while (true) {
-      cryptoObject.getRandomValues(uint32);
-      if (uint32[0] < limit) {
-        return uint32[0] % maxExclusive;
-      }
-    }
-  }
-
-  return Math.floor(Math.random() * maxExclusive);
+  return Math.floor(nextRandomUnit() * maxExclusive);
 }
 
 function shuffle(array) {
@@ -875,7 +884,7 @@ function distributeEmptySeats(emptySeats, gapCount) {
   return gaps;
 }
 
-function findBlockPlacementStarts(totalSeats, blockSize, seatMap, separatedSeatSet, separatedSeatPairs = []) {
+function findBlockPlacementStarts(totalSeats, blockSize, seatMap, separatedSeatPairs = []) {
   const placementStarts = [];
 
   for (let startSeat = 1; startSeat <= totalSeats; startSeat += 1) {
@@ -914,79 +923,145 @@ function findBlockPlacementStarts(totalSeats, blockSize, seatMap, separatedSeatS
   return placementStarts;
 }
 
+function getSternBowPrioritySeats(totalSeats) {
+  if (!Number.isInteger(totalSeats) || totalSeats < 2) {
+    return [];
+  }
+
+  const rightRearSeat = Math.ceil(totalSeats / 2);
+  const leftRearSeat = rightRearSeat + 1;
+  const prioritySeats = new Set([1, totalSeats, rightRearSeat]);
+
+  if (leftRearSeat <= totalSeats) {
+    prioritySeats.add(leftRearSeat);
+  }
+
+  return [...prioritySeats].sort((left, right) => left - right);
+}
+
+function getSternBowPrioritySeatsForSelection(selectedSeatNumbers, seatCapacity) {
+  const normalizedSelectedSeatNumbers = normalizeSelectedSeatNumbers(selectedSeatNumbers, seatCapacity);
+  if (normalizedSelectedSeatNumbers.length < 2 || !Number.isInteger(seatCapacity) || seatCapacity < 2) {
+    return [];
+  }
+
+  const basePrioritySeats = getSternBowPrioritySeats(seatCapacity);
+  const selectedSeatSet = new Set(normalizedSelectedSeatNumbers);
+  return basePrioritySeats.filter((seatNumber) => selectedSeatSet.has(seatNumber));
+}
+
+function canUseSternBowPriority(prioritySeats) {
+  if (!prioritySeats.length) {
+    return false;
+  }
+  return true;
+}
+
+function findPriorityPlacementStarts(totalSeats, blockSize, seatMap, separatedSeatPairs, prioritySeatSet) {
+  const starts = findBlockPlacementStarts(totalSeats, blockSize, seatMap, separatedSeatPairs);
+  return starts.filter((startSeat) => {
+    for (let offset = 0; offset < blockSize; offset += 1) {
+      const seatNumber = ((startSeat - 1 + offset) % totalSeats) + 1;
+      if (prioritySeatSet.has(seatNumber)) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+function tryAssignTeamBlocks({
+  totalSeats,
+  seatMap,
+  separatedSeatPairs,
+  teamBlocks,
+  priorityBlockCount = 0,
+  prioritySeatSet = new Set()
+}) {
+  const assignments = [];
+
+  for (let blockIndex = 0; blockIndex < teamBlocks.length; blockIndex += 1) {
+    const block = teamBlocks[blockIndex];
+    const needsPrioritySeat = blockIndex < priorityBlockCount;
+    const fittingStarts = needsPrioritySeat
+      ? findPriorityPlacementStarts(totalSeats, block.size, seatMap, separatedSeatPairs, prioritySeatSet)
+      : findBlockPlacementStarts(totalSeats, block.size, seatMap, separatedSeatPairs);
+
+    if (fittingStarts.length === 0) {
+      return { success: false, assignments: [] };
+    }
+
+    const startSeat = fittingStarts[getRandomInt(fittingStarts.length)];
+    const seatNumbers = Array.from({ length: block.size }, (_, offset) => ((startSeat - 1 + offset) % totalSeats) + 1);
+
+    seatNumbers.forEach((seatNumber, index) => {
+      seatMap[seatNumber - 1] = {
+        blockId: block.blockId,
+        kind: block.kind,
+        name: block.label,
+        member: block.members[index]
+      };
+    });
+
+    assignments.push({
+      kind: block.kind,
+      title: block.title,
+      members: block.members,
+      seatNumbers
+    });
+  }
+
+  return { success: true, assignments };
+}
+
 function generateResult(settings) {
-  const availableSeatNumbers = normalizeSelectedSeatNumbers(settings.availableSeatNumbers, settings.seatCapacity ?? settings.totalSeats);
-  const logicalToActualSeatNumbers = availableSeatNumbers.length > 0
-    ? availableSeatNumbers
-    : Array.from({ length: settings.totalSeats }, (_, index) => index + 1);
-  const logicalSeatCount = logicalToActualSeatNumbers.length;
+  const actualSeatCapacity = settings.seatCapacity ?? settings.totalSeats;
+  const availableSeatNumbers = normalizeSelectedSeatNumbers(settings.availableSeatNumbers, actualSeatCapacity);
+  const availableSeatSet = new Set(availableSeatNumbers);
+  const totalAvailableSeatCount = availableSeatNumbers.length;
   const groupPeople = settings.groupTeams.reduce((sum, team) => sum + team.length, 0);
   const totalPeople = groupPeople + settings.soloMembers.length;
 
-  if (totalPeople > logicalSeatCount) {
+  if (totalPeople > totalAvailableSeatCount) {
     return {
       error: "선택한 유효 좌석 수보다 배정 인원이 많습니다. 유효 좌석을 더 선택해 주세요."
     };
   }
 
-  const teamBlocks = orderBlocksBySize([
+  const allTeamBlocks = [
     ...settings.groupTeams.map((members, index) => ({ blockId: index, kind: "group", title: `단체팀 ${index + 1}`, members: shuffle(members), size: members.length, label: `단체팀 ${index + 1}` }))
-  ]);
+  ];
+  const prioritizedGroupCount = Number.isInteger(settings.prioritizedGroupCount)
+    ? Math.max(0, Math.min(settings.prioritizedGroupCount, allTeamBlocks.length))
+    : 0;
+  const prioritizedTeamBlocks = orderBlocksBySize(allTeamBlocks.slice(0, prioritizedGroupCount));
+  const regularTeamBlocks = orderBlocksBySize(allTeamBlocks.slice(prioritizedGroupCount));
+  const defaultTeamBlocks = orderBlocksBySize(allTeamBlocks);
   const soloBlocks = shuffle(settings.soloMembers.map((name, index) => ({ blockId: settings.groupTeams.length + index, kind: "solo", title: name, members: [name], size: 1, label: name })));
-  const blocks = [...teamBlocks, ...soloBlocks];
   const separatedSeatSet = settings.separatedSeatSet ?? new Set(settings.separatedSeats);
   const separatedSeatPairs = settings.separatedSeatPairs ?? [];
-
-  for (let attempt = 0; attempt < 200; attempt += 1) {
-    const seatMap = Array.from({ length: logicalSeatCount }, (_, index) => {
+  const sternBowPrioritySeats = getSternBowPrioritySeatsForSelection(availableSeatNumbers, actualSeatCapacity);
+  const sternBowPrioritySeatSet = new Set(sternBowPrioritySeats);
+  const canApplySternBowPriority = prioritizedTeamBlocks.length > 0
+    && canUseSternBowPriority(sternBowPrioritySeats);
+  const buildBaseSeatMap = () => {
+    return Array.from({ length: actualSeatCapacity }, (_, index) => {
       const seatNumber = index + 1;
-      if (separatedSeatSet.has(seatNumber)) {
-        return { kind: "empty", name: "분리 좌석" };
+      if (!availableSeatSet.has(seatNumber)) {
+        return { kind: "unavailable", name: "불가 좌석" };
       }
-
       return null;
     });
-    const assignments = [];
-    let failed = false;
+  };
 
-    for (const block of teamBlocks) {
-      const fittingStarts = findBlockPlacementStarts(logicalSeatCount, block.size, seatMap, separatedSeatSet, separatedSeatPairs);
-
-      if (fittingStarts.length === 0) {
-        failed = true;
-        break;
-      }
-
-      const startSeat = fittingStarts[getRandomInt(fittingStarts.length)];
-      const seatNumbers = Array.from({ length: block.size }, (_, offset) => ((startSeat - 1 + offset) % logicalSeatCount) + 1);
-
-      seatNumbers.forEach((seatNumber, index) => {
-        seatMap[seatNumber - 1] = {
-          blockId: block.blockId,
-          kind: block.kind,
-          name: block.label,
-          member: block.members[index]
-        };
-      });
-
-      assignments.push({
-        kind: block.kind,
-        title: block.title,
-        members: block.members,
-        seatNumbers
-      });
-    }
-
-    if (failed) {
-      continue;
-    }
-
+  const buildResultFromAssignments = (seatMap, teamAssignments, priorityApplied, priorityStatusText, priorityReason) => {
+    const assignments = [...teamAssignments];
     const availableSeats = seatMap
       .map((seat, index) => (seat && seat.kind !== "empty" ? null : index + 1))
       .filter(Boolean);
 
     if (availableSeats.length < soloBlocks.length) {
-      continue;
+      return null;
     }
 
     const soloSeatNumbers = shuffle(availableSeats).slice(0, soloBlocks.length);
@@ -1014,37 +1089,80 @@ function generateResult(settings) {
       }
     }
 
-    const actualSeatCapacity = Math.max(settings.seatCapacity ?? logicalSeatCount, logicalToActualSeatNumbers[logicalToActualSeatNumbers.length - 1] ?? logicalSeatCount);
-    const mappedSeatMap = Array.from({ length: actualSeatCapacity }, () => ({ kind: "unavailable", name: "불가 좌석" }));
+    return {
+      totalSeats: totalAvailableSeatCount,
+      separatedSeatNumbers: [...separatedSeatSet].sort((left, right) => left - right),
+      separatedSeatText: settings.separatedSeatText ?? [...separatedSeatSet].sort((left, right) => left - right).map((seatNumber) => `${seatNumber}`).join(", "),
+      totalPeople,
+      sternBowPriorityApplied: priorityApplied,
+      sternBowPriorityStatusText: priorityStatusText,
+      sternBowPriorityReason: priorityReason,
+      blocks: assignments,
+      seatMap
+    };
+  };
 
-    seatMap.forEach((seat, logicalIndex) => {
-      const actualSeatNumber = logicalToActualSeatNumbers[logicalIndex];
-      if (!Number.isInteger(actualSeatNumber) || actualSeatNumber < 1 || actualSeatNumber > actualSeatCapacity) {
-        return;
+  if (canApplySternBowPriority) {
+    for (let attempt = 0; attempt < 200; attempt += 1) {
+      const seatMap = buildBaseSeatMap();
+      const teamAssignmentResult = tryAssignTeamBlocks({
+        totalSeats: actualSeatCapacity,
+        seatMap,
+        separatedSeatPairs,
+        teamBlocks: [...prioritizedTeamBlocks, ...regularTeamBlocks],
+        priorityBlockCount: prioritizedTeamBlocks.length,
+        prioritySeatSet: sternBowPrioritySeatSet
+      });
+
+      if (!teamAssignmentResult.success) {
+        continue;
       }
 
-      mappedSeatMap[actualSeatNumber - 1] = seat;
+      const result = buildResultFromAssignments(
+        seatMap,
+        teamAssignmentResult.assignments,
+        true,
+        "적용",
+        ""
+      );
+
+      if (result) {
+        return result;
+      }
+    }
+  }
+
+  const sternBowPriorityStatusText = prioritizedTeamBlocks.length > 0 ? "미적용" : "해당 없음";
+  const sternBowPriorityReason = prioritizedTeamBlocks.length === 0
+    ? ""
+    : (!canApplySternBowPriority
+      ? "앞/뒤 우선 좌석이 유효 좌석에 하나도 없어 일반 배정으로 진행되었습니다."
+      : "연속 좌석 조건을 충족할 수 없어 일반 배정으로 진행되었습니다.");
+
+  for (let attempt = 0; attempt < 200; attempt += 1) {
+    const seatMap = buildBaseSeatMap();
+    const teamAssignmentResult = tryAssignTeamBlocks({
+      totalSeats: actualSeatCapacity,
+      seatMap,
+      separatedSeatPairs,
+      teamBlocks: defaultTeamBlocks
     });
 
-    const mappedAssignments = assignments.map((block) => ({
-      ...block,
-      seatNumbers: block.seatNumbers
-        .map((seatNumber) => logicalToActualSeatNumbers[seatNumber - 1])
-        .filter((seatNumber) => Number.isInteger(seatNumber))
-    }));
+    if (!teamAssignmentResult.success) {
+      continue;
+    }
 
-    const mappedSeparatedSeatNumbers = [...separatedSeatSet]
-      .map((seatNumber) => logicalToActualSeatNumbers[seatNumber - 1])
-      .filter((seatNumber) => Number.isInteger(seatNumber));
+    const result = buildResultFromAssignments(
+      seatMap,
+      teamAssignmentResult.assignments,
+      false,
+      sternBowPriorityStatusText,
+      sternBowPriorityReason
+    );
 
-    return {
-      totalSeats: logicalSeatCount,
-      separatedSeatNumbers: mappedSeparatedSeatNumbers,
-      separatedSeatText: settings.separatedSeatText ?? mappedSeparatedSeatNumbers.map((seatNumber) => `${seatNumber}`).join(", "),
-      totalPeople,
-      blocks: mappedAssignments,
-      seatMap: mappedSeatMap
-    };
+    if (result) {
+      return result;
+    }
   }
 
   return {
@@ -1075,10 +1193,20 @@ function applyStoredSettings(lockedTotalSeats = null) {
 
 function renderResult(result) {
   getElement("totalSeatStat").textContent = result.totalSeats;
-  getElement("assignedPeopleStat").textContent = result.totalPeople;
   getElement("separatedSeatStat").textContent = result.separatedSeatText?.trim()
     ? result.separatedSeatText
     : formatPairedSeatGroups(result.separatedSeatNumbers);
+  const sternBowPriorityStat = getElement("sternBowPriorityStat");
+  const sternBowPriorityDetail = getElement("sternBowPriorityDetail");
+  if (sternBowPriorityStat) {
+    const applied = result.sternBowPriorityApplied === true;
+    sternBowPriorityStat.textContent = result.sternBowPriorityStatusText || (applied ? "적용" : "해당 없음");
+    sternBowPriorityStat.classList.toggle("is-applied", applied);
+    sternBowPriorityStat.classList.toggle("is-not-applied", !applied && result.sternBowPriorityStatusText === "미적용");
+  }
+  if (sternBowPriorityDetail) {
+    sternBowPriorityDetail.textContent = result.sternBowPriorityReason || "";
+  }
 
   const seatList = getElement("seatList");
   const seatMap = getElement("seatMap");
@@ -1490,9 +1618,13 @@ function handleSettingsPage() {
   const separatedSeatsInput = getElement("separatedSeats");
   const combinedTeamsInput = getElement("combinedTeams");
   const soloMembersInput = getElement("soloMembers");
+  const teamEntryList = getElement("teamEntryList");
   const totalSeatsInput = getElement("totalSeats");
   const totalSeatsHelp = getElement("totalSeatsHelp");
   const separatedSeatSuggestion = buildSeparatedSeatSuggestion(selectedSeatNumbers, capacity);
+  const storedSettings = loadSettings();
+  const selectedTeamKeys = new Set(Array.isArray(storedSettings?.selectedTeamKeys) ? storedSettings.selectedTeamKeys : []);
+  const MIN_TEAM_INPUT_ROWS = 3;
 
   totalSeatsInput.readOnly = true;
   totalSeatsInput.value = `${selectedSeatNumbers.length}`;
@@ -1504,14 +1636,14 @@ function handleSettingsPage() {
 
   const refreshSeparatedSeatsInput = () => {
     const currentValue = separatedSeatsInput.value;
-    const result = sanitizeSeparatedSeatsInput(currentValue, selectedSeatNumbers.length, selectedSeatNumbers);
+    const result = sanitizeSeparatedSeatsInput(currentValue, capacity, selectedSeatNumbers);
 
     if (!result.changed) {
       return;
     }
 
     separatedSeatsInput.value = result.text;
-    message.textContent = "선택 좌석 번호 또는 1~유효좌석수 범위의 번호만 입력할 수 있습니다.";
+    message.textContent = "분리 좌석은 선택한 실제 좌석 번호만 입력할 수 있습니다.";
     message.style.color = "var(--danger)";
   };
 
@@ -1521,8 +1653,128 @@ function handleSettingsPage() {
       separatedSeats: separatedSeatsInput.value,
       combinedTeams: combinedTeamsInput.value,
       soloMembers: soloMembersInput.value,
+      selectedTeamKeys: [...selectedTeamKeys],
       availableSeatNumbers: selectedSeatNumbers
     });
+  };
+
+  const toInitialTeamLines = (text) => {
+    const normalized = text.replace(/\r/g, "");
+    return normalized ? normalized.split("\n") : [];
+  };
+
+  const normalizeTeamLines = (lines) => {
+    const normalized = lines.map((line) => (typeof line === "string" ? line : String(line || "")));
+    while (normalized.length < MIN_TEAM_INPUT_ROWS) {
+      normalized.push("");
+    }
+
+    while (normalized.length > MIN_TEAM_INPUT_ROWS && normalized[normalized.length - 1].trim() === "" && normalized[normalized.length - 2].trim() === "") {
+      normalized.pop();
+    }
+
+    if (normalized[normalized.length - 1].trim() !== "") {
+      normalized.push("");
+    }
+
+    return normalized;
+  };
+
+  const buildTeamPreviewItems = (lines) => {
+    return lines.map((rawLine, index) => {
+      const line = rawLine.trim();
+      if (!line) {
+        return {
+          key: `team-${index + 1}`,
+          checkable: false,
+          hasInput: false,
+          lineNumber: index + 1
+        };
+      }
+
+      const normalized = line.replace(/^(?:단체|가족)\s*[:=]\s*/u, "").trim();
+      const members = expandShorthandTeam(normalized).filter(Boolean);
+      const previewName = members[0] || `팀 ${index + 1}`;
+      return {
+        key: `team-${index + 1}`,
+        label: previewName,
+        members,
+        memberCount: members.length,
+        checkable: members.length >= 2,
+        hasInput: true,
+        lineNumber: index + 1
+      };
+    });
+  };
+
+  const escapeAttribute = (value) => value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  let teamLines = normalizeTeamLines(toInitialTeamLines(combinedTeamsInput.value));
+  let isTeamEntryComposing = false;
+  let hasPendingTeamEntryRender = false;
+
+  const syncCombinedTeamsValue = () => {
+    combinedTeamsInput.value = teamLines.join("\n").replace(/\n+$/u, "");
+  };
+
+  const renderTeamEntries = (focusState = null) => {
+    if (!teamEntryList) {
+      return;
+    }
+
+    const teamItems = buildTeamPreviewItems(teamLines);
+    const hasCheckableLine = teamItems.some((item) => item.checkable);
+    const validKeys = new Set(teamItems.filter((item) => item.checkable).map((item) => item.key));
+    [...selectedTeamKeys].forEach((key) => {
+      if (!validKeys.has(key)) {
+        selectedTeamKeys.delete(key);
+      }
+    });
+
+    teamEntryList.innerHTML = teamItems.map((item, index) => {
+      const selected = selectedTeamKeys.has(item.key);
+      const rawValue = teamLines[index] || "";
+      const escapedValue = escapeAttribute(rawValue);
+      const samplePlaceholder = index === 0 ? "예: 언더더씨 4" : "";
+      const ariaLabel = item.hasInput
+        ? `${item.lineNumber}번 줄 단체팀 선택`
+        : `${item.lineNumber}번 줄은 비어 있어 체크할 수 없습니다.`;
+      const rowClass = item.checkable
+        ? `team-entry-row is-checkable ${selected ? "is-selected" : ""}`
+        : item.hasInput
+          ? "team-entry-row is-solo"
+          : "team-entry-row";
+
+      return `
+        <div class="${rowClass}" data-team-row-index="${index}">
+          <input class="team-entry-input" type="text" data-team-row-index="${index}" value="${escapedValue}" placeholder="${samplePlaceholder}">
+          <button type="button" class="team-select-toggle ${selected ? "is-selected" : ""}" data-team-key="${item.key}" aria-pressed="${selected ? "true" : "false"}" aria-label="${ariaLabel}" ${item.checkable ? "" : "disabled aria-disabled=\"true\""}>
+            <span class="team-select-mark" aria-hidden="true">✓</span>
+          </button>
+        </div>
+      `;
+    }).join("");
+
+    if (!hasCheckableLine) {
+      message.textContent = "2명 이상 입력된 줄이 없어 체크할 단체팀이 없습니다.";
+      message.style.color = "var(--muted)";
+    } else if (message.style.color === "var(--muted)" && message.textContent.includes("체크할 단체팀이 없습니다")) {
+      message.textContent = "";
+    }
+
+    if (focusState && Number.isInteger(focusState.index)) {
+      const targetInput = teamEntryList.querySelector(`.team-entry-input[data-team-row-index="${focusState.index}"]`);
+      if (targetInput) {
+        targetInput.focus();
+        if (Number.isInteger(focusState.selectionStart) && Number.isInteger(focusState.selectionEnd)) {
+          targetInput.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+        }
+      }
+    }
   };
 
   resetButton.addEventListener("click", () => {
@@ -1532,17 +1784,114 @@ function handleSettingsPage() {
     separatedSeatsInput.value = separatedSeatSuggestion;
     getElement("combinedTeams").value = "";
     getElement("soloMembers").value = "";
+    selectedTeamKeys.clear();
     totalSeatsInput.value = `${selectedSeatNumbers.length}`;
+    teamLines = normalizeTeamLines([]);
+    syncCombinedTeamsValue();
+    renderTeamEntries();
+    persistSettingsDraft();
     message.textContent = "설정이 초기화되어 분리 좌석 추천값이 자동 입력되었습니다.";
     message.style.color = "var(--muted)";
   });
 
   separatedSeatsInput.addEventListener("input", refreshSeparatedSeatsInput);
-  combinedTeamsInput.addEventListener("input", persistSettingsDraft);
   soloMembersInput.addEventListener("input", persistSettingsDraft);
+
+  if (teamEntryList) {
+    teamEntryList.addEventListener("compositionstart", (event) => {
+      if (!event.target.closest(".team-entry-input")) {
+        return;
+      }
+      isTeamEntryComposing = true;
+    });
+
+    teamEntryList.addEventListener("compositionend", (event) => {
+      const rowInput = event.target.closest(".team-entry-input");
+      if (!rowInput) {
+        return;
+      }
+
+      isTeamEntryComposing = false;
+
+      const rowIndex = Number.parseInt(rowInput.dataset.teamRowIndex, 10);
+      if (!Number.isInteger(rowIndex) || rowIndex < 0) {
+        return;
+      }
+
+      teamLines[rowIndex] = rowInput.value;
+      syncCombinedTeamsValue();
+      persistSettingsDraft();
+      hasPendingTeamEntryRender = true;
+    });
+
+    teamEntryList.addEventListener("input", (event) => {
+      const rowInput = event.target.closest(".team-entry-input");
+      if (!rowInput) {
+        return;
+      }
+
+      const rowIndex = Number.parseInt(rowInput.dataset.teamRowIndex, 10);
+      if (!Number.isInteger(rowIndex) || rowIndex < 0) {
+        return;
+      }
+
+      teamLines[rowIndex] = rowInput.value;
+      syncCombinedTeamsValue();
+      persistSettingsDraft();
+      hasPendingTeamEntryRender = true;
+    });
+
+    teamEntryList.addEventListener("focusout", (event) => {
+      if (!event.target.closest(".team-entry-input")) {
+        return;
+      }
+      if (isTeamEntryComposing || !hasPendingTeamEntryRender) {
+        return;
+      }
+
+      window.setTimeout(() => {
+        if (isTeamEntryComposing || !hasPendingTeamEntryRender) {
+          return;
+        }
+        teamLines = normalizeTeamLines(teamLines);
+        syncCombinedTeamsValue();
+        renderTeamEntries();
+        persistSettingsDraft();
+        hasPendingTeamEntryRender = false;
+      }, 0);
+    });
+
+    teamEntryList.addEventListener("click", (event) => {
+      const toggleButton = event.target.closest(".team-select-toggle");
+      if (!toggleButton) {
+        return;
+      }
+
+      const teamKey = toggleButton.dataset.teamKey;
+      if (!teamKey) {
+        return;
+      }
+
+      if (selectedTeamKeys.has(teamKey)) {
+        selectedTeamKeys.delete(teamKey);
+      } else {
+        selectedTeamKeys.add(teamKey);
+      }
+
+      renderTeamEntries();
+      persistSettingsDraft();
+    });
+  }
+
+  syncCombinedTeamsValue();
+  renderTeamEntries();
 
   form.addEventListener("submit", (event) => {
     event.preventDefault();
+    teamLines = normalizeTeamLines(teamLines);
+    syncCombinedTeamsValue();
+    hasPendingTeamEntryRender = false;
+    renderTeamEntries();
 
     const separatedSeatInputText = getElement("separatedSeats").value;
 
@@ -1550,10 +1899,10 @@ function handleSettingsPage() {
       totalSeats: selectedSeatNumbers.length,
       seatCapacity: capacity,
       availableSeatNumbers: selectedSeatNumbers,
-      separatedSeats: parseSeparatedSeats(separatedSeatInputText, selectedSeatNumbers.length, selectedSeatNumbers),
-      separatedSeatPairs: parseSeparatedSeatPairs(separatedSeatInputText, selectedSeatNumbers.length, selectedSeatNumbers),
+      separatedSeats: parseSeparatedSeats(separatedSeatInputText, capacity, selectedSeatNumbers),
+      separatedSeatPairs: parseSeparatedSeatPairs(separatedSeatInputText, capacity, selectedSeatNumbers),
       separatedSeatText: separatedSeatInputText,
-      ...parseCombinedTeams(getElement("combinedTeams").value),
+      ...parseCombinedTeams(getElement("combinedTeams").value, selectedTeamKeys),
       soloMembers: parseSoloMembers(getElement("soloMembers").value)
     };
 

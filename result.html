@@ -22,29 +22,10 @@
           <a class="hero-visual" href="https://cafe.naver.com/skrtlvkxl" target="_blank" rel="noopener noreferrer" aria-label="네이버 카페로 이동">
             <img src="image/s1.png" alt="">
           </a>
-          <small class="result-header-version">v1.2</small>
-        </div>
-        <div class="header-actions">
-          <a class="ghost-btn link-btn" href="index.html">홈으로</a>
-          <a class="ghost-btn link-btn" href="seat-selection.html">설정으로</a>
+          <small class="result-header-version">v1.21</small>
         </div>
       </div>
     </header>
-
-    <section class="result-summary-grid">
-      <article class="glass stat-card">
-        <span>전체 좌석</span>
-        <strong id="totalSeatStat">0</strong>
-      </article>
-      <article class="glass stat-card">
-        <span>배정 인원</span>
-        <strong id="assignedPeopleStat">0</strong>
-      </article>
-      <article class="glass stat-card">
-        <span>분리 좌석</span>
-        <strong id="separatedSeatStat">0</strong>
-      </article>
-    </section>
 
     <section class="result-layout">
       <aside class="glass panel map-panel">
@@ -54,12 +35,33 @@
         <div id="seatMap" class="seat-map"></div>
       </aside>
 
-      <div class="glass panel result-panel">
-        <div class="panel-head">
-          <h2>좌석 목록</h2>
-          <p>팀(가족)은 이웃하는 좌석으로 배정하기 위해 분리 좌석 양쪽을 같이 배정하지 않습니다.</p>
+      <div class="result-side-column">
+        <div class="result-actions-panel glass">
+          <a class="ghost-btn link-btn" href="seat-selection.html">설정으로</a>
+          <a class="ghost-btn link-btn" href="index.html">홈으로</a>
         </div>
-        <div id="seatList" class="seat-list"></div>
+        <section class="result-summary-grid">
+          <article class="glass stat-card">
+            <span>배정 좌석</span>
+            <strong id="totalSeatStat">0</strong>
+          </article>
+          <article class="glass stat-card">
+            <span>분리 좌석</span>
+            <strong id="separatedSeatStat">0</strong>
+          </article>
+          <article class="glass stat-card">
+            <span>팀 선미/후미</span>
+            <strong id="sternBowPriorityStat">-</strong>
+            <small id="sternBowPriorityDetail" class="stat-card-detail"></small>
+          </article>
+        </section>
+        <div class="glass panel result-panel">
+          <div class="panel-head">
+            <h2>좌석 목록</h2>
+            <p>팀(가족)은 이웃하는 좌석으로 배정하기 위해 분리 좌석 양쪽을 같이 배정하지 않습니다.</p>
+          </div>
+          <div id="seatList" class="seat-list"></div>
+        </div>
       </div>
     </section>
   </main>
