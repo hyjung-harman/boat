@@ -82,11 +82,6 @@ function renderResult(result) {
   getElement("totalNameStat").textContent = result.rankedNames.length;
   getElement("topNameStat").textContent = result.rankedNames[0] ?? "-";
 
-  const generatedAt = result.generatedAt ? new Date(result.generatedAt) : null;
-  getElement("generatedAtStat").textContent = generatedAt && !Number.isNaN(generatedAt.getTime())
-    ? generatedAt.toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" })
-    : "-";
-
   const rankList = getElement("rankList");
 
   if (!result.rankedNames.length) {
@@ -103,7 +98,6 @@ function renderResult(result) {
         </h3>
         <span class="seat-badge">순위</span>
       </div>
-      <p class="rank-subtext">무작위 셔플 결과입니다.</p>
     </article>
   `).join("");
 }
